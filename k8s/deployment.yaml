@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: expense-tracker-deployment
+  labels:
+    app: expense-tracker
+spec:
+  # IMPORTANT ARCHITECTURE DECISION:
+  # SQLite uses file-level locking. To prevent concurrent write locks
+  # and database corruption, a single replica (1) is deployed with persistent storage.
+  replicas: 1
+  selector:
+    matchLabels:
+      app: expense-tracker
+  template:
+    metadata:
+      labels:
+        app: expense-tracker
+    spec:
+      containers:
+        - name: expense-tracker
+          image: expense-tracker:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+              name: http
+          env:
+            - name: PORT
+              value: "5000"
+            - name: EXPENSE_DB_PATH
+              value: "/app/data/expenses.db"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          # Kubernetes Health Probes
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 15
+            periodSeconds: 15
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 2
+          volumeMounts:
+            - name: expense-storage
+              mountPath: /app/data
+      volumes:
+        - name: expense-storage
+          persistentVolumeClaim:
+            claimName: expense-tracker-pvc

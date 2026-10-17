@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud-Based Expense Tracker | DevOps CI/CD Dashboard</title>
+    <!-- Modern Google Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-icon">
+                    <i class="fa-solid fa-wallet"></i>
+                </div>
+                <div class="brand-text">
+                    <h2>CloudTracker</h2>
+                    <span>DevOps & Cloud Lab</span>
+                </div>
+            </div>
+
+            <nav class="nav-menu">
+                <a href="#dashboard" class="nav-item active" data-section="dashboard">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#expenses" class="nav-item" data-section="expenses">
+                    <i class="fa-solid fa-receipt"></i>
+                    <span>Transactions</span>
+                </a>
+                <a href="#analytics" class="nav-item" data-section="analytics">
+                    <i class="fa-solid fa-chart-column"></i>
+                    <span>Analytics</span>
+                </a>
+                <a href="#devops" class="nav-item" data-section="devops">
+                    <i class="fa-solid fa-server"></i>
+                    <span>DevOps Architecture</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="system-status">
+                    <span class="status-indicator online" id="health-dot"></span>
+                    <div class="status-info">
+                        <small>Backend Service</small>
+                        <strong id="health-status">Checking...</strong>
+                    </div>
+                </div>
+                <button class="btn btn-outline-light btn-sm w-100" id="btn-seed-data" title="Reset sample demo data for viva">
+                    <i class="fa-solid fa-rotate-right"></i> Reset Demo Data
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Top Navbar -->
+            <header class="top-nav">
+                <div class="nav-toggle" id="menu-toggle">
+                    <i class="fa-solid fa-bars"></i>
+                </div>
+                <div class="page-title">
+                    <h1 id="page-heading">Financial Overview</h1>
+                    <p class="subtitle">Cloud-Based Expense Tracker with Automated CI/CD Pipeline</p>
+                </div>
+                <div class="top-actions">
+                    <span class="badge badge-devops">
+                        <i class="fa-brands fa-docker"></i> Docker + K8s
+                    </span>
+                    <button class="btn btn-primary" id="btn-open-add-modal">
+                        <i class="fa-solid fa-plus"></i> Add Expense
+                    </button>
+                </div>
+            </header>
+
+            <div class="container-fluid">
+                <!-- Toast Notification Container -->
+                <div id="toast-container" class="toast-container"></div>
+
+                <!-- SECTION 1: DASHBOARD -->
+                <section id="section-dashboard" class="content-section">
+                    <!-- KPI Summary Cards -->
+                    <div class="kpi-grid">
+                        <div class="kpi-card card-total">
+                            <div class="kpi-icon">
+                                <i class="fa-solid fa-money-bill-wave"></i>
+                            </div>
+                            <div class="kpi-details">
+                                <span class="kpi-label">Total Expenses</span>
+                                <h3 class="kpi-value" id="kpi-total">$0.00</h3>
+                                <span class="kpi-subtext" id="kpi-total-sub">Across all entries</span>
+                            </div>
+                        </div>
+
+                        <div class="kpi-card card-month">
+                            <div class="kpi-icon">
+                                <i class="fa-solid fa-calendar-days"></i>
+                            </div>
+                            <div class="kpi-details">
+                                <span class="kpi-label">Current Month</span>
+                                <h3 class="kpi-value" id="kpi-month">$0.00</h3>
+                                <span class="kpi-subtext" id="kpi-month-name">This Month</span>
+                            </div>
+                        </div>
+
+                        <div class="kpi-card card-transactions">
+                            <div class="kpi-icon">
+                                <i class="fa-solid fa-list-check"></i>
+                            </div>
+                            <div class="kpi-details">
+                                <span class="kpi-label">Transactions</span>
+                                <h3 class="kpi-value" id="kpi-transactions">0</h3>
+                                <span class="kpi-subtext">Recorded items</span>
+                            </div>
+                        </div>
+
+                        <div class="kpi-card card-highest">
+                            <div class="kpi-icon">
+                                <i class="fa-solid fa-trophy"></i>
+                            </div>
+                            <div class="kpi-details">
+                                <span class="kpi-label">Top Category</span>
+                                <h3 class="kpi-value" id="kpi-top-category">None</h3>
+                                <span class="kpi-subtext" id="kpi-top-amount">$0.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Row -->
+                    <div class="charts-grid">
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <h3><i class="fa-solid fa-chart-pie"></i> Category Breakdown</h3>
+                                <small>Distribution of expenses</small>
+                            </div>
+                            <div class="chart-body">
+                                <canvas id="categoryChart"></canvas>
+                                <div id="categoryChartEmpty" class="chart-empty hidden">No expense data available</div>
+                            </div>
+                        </div>
+
+                        <div class="chart-card">
+                            <div class="chart-header">
+                                <h3><i class="fa-solid fa-chart-simple"></i> Monthly Spending Trend</h3>
+                                <small>Historical monthly spending</small>
+                            </div>
+                            <div class="chart-body">
+                                <canvas id="monthlyChart"></canvas>
+                                <div id="monthlyChartEmpty" class="chart-empty hidden">No monthly trends recorded</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Transactions Preview -->
+                    <div class="recent-card">
+                        <div class="recent-header">
+                            <div>
+                                <h3>Recent Transactions</h3>
+                                <small>Latest 5 recorded expenses</small>
+                            </div>
+                            <button class="btn btn-sm btn-outline" id="btn-view-all-recent">View All</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Title</th>
+                                        <th>Category</th>
+                                        <th>Amount</th>
+                                        <th>Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recent-expenses-body">
+                                    <!-- Populated via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECTION 2: EXPENSES / TRANSACTIONS TABLE -->
+                <section id="section-expenses" class="content-section hidden">
+                    <div class="filter-card">
+                        <div class="filter-row">
+                            <div class="filter-item search-box">
+                                <label for="filter-search"><i class="fa-solid fa-magnifying-glass"></i> Search</label>
+                                <input type="text" id="filter-search" class="form-control" placeholder="Search title or note...">
+                            </div>
+
+                            <div class="filter-item">
+                                <label for="filter-category"><i class="fa-solid fa-tag"></i> Category</label>
+                                <select id="filter-category" class="form-control">
+                                    <option value="">All Categories</option>
+                                    <option value="Food">Food</option>
+                                    <option value="Travel">Travel</option>
+                                    <option value="Shopping">Shopping</option>
+                                    <option value="Education">Education</option>
+                                    <option value="Bills">Bills</option>
+                                    <option value="Entertainment">Entertainment</option>
+                                    <option value="Healthcare">Healthcare</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+
+                            <div class="filter-item">
+                                <label for="filter-month"><i class="fa-solid fa-calendar-day"></i> Month</label>
+                                <input type="month" id="filter-month" class="form-control">
+                            </div>
+
+                            <div class="filter-actions">
+                                <button class="btn btn-outline" id="btn-clear-filters">
+                                    <i class="fa-solid fa-filter-circle-xmark"></i> Clear Filters
+                                </button>
+                                <button class="btn btn-primary" id="btn-add-expense-table">
+                                    <i class="fa-solid fa-plus"></i> Add
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Expenses Table -->
+                    <div class="data-card">
+                        <div class="data-header">
+                            <div>
+                                <h3>All Transactions (<span id="filtered-count">0</span>)</h3>
+                                <small>Filtered expense list</small>
+                            </div>
+                            <div class="badge badge-info" id="filtered-total-badge">
+                                Filtered Total: $0.00
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Date</th>
+                                        <th>Title</th>
+                                        <th>Category</th>
+                                        <th>Amount</th>
+                                        <th>Description</th>
+                                        <th class="text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="expenses-table-body">
+                                    <!-- Populated via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Empty State -->
+                        <div id="table-empty-state" class="empty-state hidden">
+                            <div class="empty-icon">
+                                <i class="fa-solid fa-inbox"></i>
+                            </div>
+                            <h4>No expenses found</h4>
+                            <p>Try adjusting your search criteria or add a new expense transaction.</p>
+                            <button class="btn btn-primary btn-sm" id="btn-empty-add">
+                                <i class="fa-solid fa-plus"></i> Create Expense
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECTION 3: ANALYTICS -->
+                <section id="section-analytics" class="content-section hidden">
+                    <div class="analytics-header-card">
+                        <h3><i class="fa-solid fa-chart-line"></i> In-depth Spending Analytics</h3>
+                        <p>Detailed breakdown of categorical spending, percentages, and frequency of transactions.</p>
+                    </div>
+
+                    <div class="table-card">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Category</th>
+                                        <th>Transaction Count</th>
+                                        <th>Total Spent</th>
+                                        <th>% of Total Budget</th>
+                                        <th>Progress</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="analytics-table-body">
+                                    <!-- Populated via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECTION 4: DEVOPS ARCHITECTURE & DEMO INFO -->
+                <section id="section-devops" class="content-section hidden">
+                    <div class="devops-grid">
+                        <div class="devops-card">
+                            <div class="devops-card-header">
+                                <i class="fa-solid fa-network-wired"></i>
+                                <h3>CI/CD & Cloud Architecture</h3>
+                            </div>
+                            <p>This application implements an industry-standard DevOps pipeline tailored for demonstration and cost safety:</p>
+                            <div class="pipeline-flow">
+                                <div class="flow-step">
+                                    <div class="step-num">1</div>
+                                    <strong>Git / GitHub</strong>
+                                    <span>Code Repository</span>
+                                </div>
+                                <div class="flow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                                <div class="flow-step">
+                                    <div class="step-num">2</div>
+                                    <strong>Jenkins</strong>
+                                    <span>Build & Test Pipeline</span>
+                                </div>
+                                <div class="flow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                                <div class="flow-step">
+                                    <div class="step-num">3</div>
+                                    <strong>Docker Hub</strong>
+                                    <span>Container Image</span>
+                                </div>
+                                <div class="flow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                                <div class="flow-step">
+                                    <div class="step-num">4</div>
+                                    <strong>Kubernetes</strong>
+                                    <span>Pod & Persistent Volume</span>
+                                </div>
+                                <div class="flow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+                                <div class="flow-step">
+                                    <div class="step-num">5</div>
+                                    <strong>AWS EC2</strong>
+                                    <span>Live Cloud Host</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="devops-card">
+                            <div class="devops-card-header">
+                                <i class="fa-solid fa-database"></i>
+                                <h3>Architectural Highlights for Viva</h3>
+                            </div>
+                            <ul class="devops-list">
+                                <li>
+                                    <strong>SQLite Concurrency Notice:</strong> SQLite uses file-level locking. For safe persistence without data corruption, a single replica (Deployment replica: 1) is paired with a PersistentVolumeClaim.
+                                </li>
+                                <li>
+                                    <strong>Gunicorn WSGI Server:</strong> Production-ready WSGI server hosting Flask inside the lightweight Docker container (`python:3.11-slim`).
+                                </li>
+                                <li>
+                                    <strong>Probes Configured:</strong> Kubernetes HTTP Liveness and Readiness probes target `/health` to automate container self-healing.
+                                </li>
+                                <li>
+                                    <strong>Cost Safety:</strong> Single t2.micro / t3.micro EC2 deployment avoiding EKS, NAT Gateways, or paid load balancers.
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL: ADD / EDIT EXPENSE -->
+    <div class="modal-overlay hidden" id="expense-modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="modal-title"><i class="fa-solid fa-plus-circle"></i> Add New Expense</h3>
+                <button class="modal-close" id="modal-close-btn">&times;</button>
+            </div>
+            <form id="expense-form" novalidate>
+                <input type="hidden" id="expense-id" value="">
+                
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="expense-title">Expense Title <span class="required">*</span></label>
+                        <input type="text" id="expense-title" class="form-control" placeholder="e.g. Campus Lunch, Books, Electricity Bill" required maxlength="120">
+                        <div class="form-feedback" id="err-title"></div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group col-half">
+                            <label for="expense-amount">Amount ($) <span class="required">*</span></label>
+                            <input type="number" step="0.01" min="0.01" id="expense-amount" class="form-control" placeholder="0.00" required>
+                            <div class="form-feedback" id="err-amount"></div>
+                        </div>
+
+                        <div class="form-group col-half">
+                            <label for="expense-category">Category <span class="required">*</span></label>
+                            <select id="expense-category" class="form-control" required>
+                                <option value="" disabled selected>Select category</option>
+                                <option value="Food">Food</option>
+                                <option value="Travel">Travel</option>
+                                <option value="Shopping">Shopping</option>
+                                <option value="Education">Education</option>
+                                <option value="Bills">Bills</option>
+                                <option value="Entertainment">Entertainment</option>
+                                <option value="Healthcare">Healthcare</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            <div class="form-feedback" id="err-category"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="expense-date">Date <span class="required">*</span></label>
+                        <input type="date" id="expense-date" class="form-control" required>
+                        <div class="form-feedback" id="err-date"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="expense-desc">Description / Notes <small>(Optional)</small></label>
+                        <textarea id="expense-desc" class="form-control" rows="3" placeholder="Additional details or vendor info..."></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="modal-cancel-btn">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="modal-submit-btn">
+                        <i class="fa-solid fa-save"></i> Save Expense
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: DELETE CONFIRMATION -->
+    <div class="modal-overlay hidden" id="delete-modal">
+        <div class="modal-card modal-sm">
+            <div class="modal-header danger">
+                <h3><i class="fa-solid fa-triangle-exclamation"></i> Confirm Deletion</h3>
+                <button class="modal-close" id="delete-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to permanently delete this expense?</p>
+                <div class="delete-preview" id="delete-item-preview">
+                    <!-- Target item summary -->
+                </div>
+                <p class="text-muted"><small>This action cannot be undone.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="delete-cancel-btn">Cancel</button>
+                <button type="button" class="btn btn-danger" id="delete-confirm-btn">
+                    <i class="fa-solid fa-trash"></i> Delete
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart.js from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- App Script -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

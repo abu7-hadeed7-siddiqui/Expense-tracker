@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: expense-tracker-service
+  labels:
+    app: expense-tracker
+spec:
+  # NodePort provides direct, zero-cost access on Minikube, k3s, or an EC2 instance
+  # without needing an expensive AWS Elastic Load Balancer (ELB).
+  type: NodePort
+  selector:
+    app: expense-tracker
+  ports:
+    - protocol: TCP
+      port: 5000
+      targetPort: 5000
+      nodePort: 30080
+      name: http
