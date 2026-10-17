@@ -1,118 +1,91 @@
 pipeline {
     agent any
 
-    environment {
-        APP_NAME = 'expense-tracker'
-        IMAGE_NAME = 'expense-tracker'
-        // Jenkins Credentials ID for Docker Registry (configure in Jenkins: Manage Jenkins -> Credentials)
-        DOCKER_CREDS_ID = 'dockerhub-credentials'
+    options {
+        skipDefaultCheckout(true)
+        timestamps()
     }
 
     parameters {
-        string(name: 'DOCKER_USER', defaultValue: 'collegedemo', description: 'Docker Hub username / registry namespace')
-        booleanParam(name: 'PUSH_IMAGE', defaultValue: false, description: 'Push image to Docker Hub (requires dockerhub-credentials)')
-        booleanParam(name: 'DEPLOY_K8S', defaultValue: false, description: 'Deploy to Kubernetes cluster (requires kubectl access)')
+        booleanParam(name: 'PUSH_IMAGE', defaultValue: false, description: 'Push image to a registry (keep false)')
+        booleanParam(name: 'DEPLOY_K8S', defaultValue: false, description: 'Deploy to Kubernetes (keep false)')
+    }
+
+    environment {
+        IMAGE_NAME = 'expense-tracker'
+        IMAGE_TAG  = "jenkins-${env.BUILD_NUMBER}"
     }
 
     stages {
-        stage('1. Checkout Code') {
+        stage('Get Source') {
             steps {
-                echo "Checking out source code from Git repository..."
-                checkout scm
+                sh '''
+                    set -e
+                    test -f /project/app.py
+                    rm -rf ./* ./.venv 2>/dev/null || true
+                    cd /project
+                    tar --exclude=.git --exclude=.venv --exclude=__pycache__ \
+                        --exclude=.pytest_cache --exclude='*.db' -cf - . | (cd "$WORKSPACE" && tar -xf -)
+                    cd "$WORKSPACE" && ls -la
+                '''
             }
         }
 
-        stage('2. Install Dependencies & Automated Tests') {
+        stage('Install Dependencies') {
             steps {
-                echo "Creating virtual environment and executing automated test suite..."
                 sh '''
-                    python3 -m venv venv || virtualenv venv
-                    . venv/bin/activate
+                    set -e
+                    python3 -m venv .venv
+                    . .venv/bin/activate
                     pip install --upgrade pip
-                    pip install -r requirements.txt
-                    echo "Running pytest test suite..."
-                    pytest tests/test_app.py -v
+                    pip install -r requirements.txt pytest
                 '''
             }
         }
 
-        stage('3. Build Docker Image') {
+        stage('Run Tests') {
             steps {
-                echo "Building production Docker container image..."
-                sh """
-                    docker build -t ${APP_NAME}:${BUILD_NUMBER} -t ${APP_NAME}:latest .
-                    echo "Docker image built successfully: ${APP_NAME}:${BUILD_NUMBER}"
-                """
-            }
-        }
-
-        stage('4. Push to Container Registry') {
-            when {
-                expression { return params.PUSH_IMAGE == true }
-            }
-            steps {
-                echo "Authenticating with Docker Hub and publishing image..."
-                withCredentials([usernamePassword(credentialsId: "${env.DOCKER_CREDS_ID}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh """
-                        echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
-                        docker tag ${APP_NAME}:latest \$DOCKER_USER/${APP_NAME}:${BUILD_NUMBER}
-                        docker tag ${APP_NAME}:latest \$DOCKER_USER/${APP_NAME}:latest
-                        docker push \$DOCKER_USER/${APP_NAME}:${BUILD_NUMBER}
-                        docker push \$DOCKER_USER/${APP_NAME}:latest
-                        docker logout
-                        echo "Image successfully pushed to Docker Hub: \$DOCKER_USER/${APP_NAME}:latest"
-                    """
-                }
-            }
-        }
-
-        stage('5. Deploy to Kubernetes') {
-            when {
-                expression { return params.DEPLOY_K8S == true }
-            }
-            steps {
-                echo "Applying Kubernetes manifests to target cluster..."
-                sh """
-                    # Apply storage and configuration first
-                    kubectl apply -f k8s/persistent-volume.yaml
-                    kubectl apply -f k8s/persistent-volume-claim.yaml
-                    kubectl apply -f k8s/service.yaml
-                    kubectl apply -f k8s/deployment.yaml
-                    
-                    # Update image to current build if pushed
-                    if [ "${params.PUSH_IMAGE}" = "true" ] && [ -n "${params.DOCKER_USER}" ]; then
-                        kubectl set image deployment/expense-tracker-deployment expense-tracker=${params.DOCKER_USER}/${APP_NAME}:${BUILD_NUMBER}
-                    fi
-                """
-            }
-        }
-
-        stage('6. Verify Rollout & Health') {
-            when {
-                expression { return params.DEPLOY_K8S == true }
-            }
-            steps {
-                echo "Verifying Kubernetes deployment rollout status..."
                 sh '''
-                    kubectl rollout status deployment/expense-tracker-deployment --timeout=120s
-                    echo "Checking pod status:"
-                    kubectl get pods -l app=expense-tracker
-                    kubectl get svc expense-tracker-service
+                    . .venv/bin/activate
+                    export PYTHONPATH="$WORKSPACE"
+                    python -m pytest tests/test_app.py -v
                 '''
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .'
+                sh 'docker images ${IMAGE_NAME}'
+            }
+        }
+
+        stage('Push Image') {
+            when { expression { return params.PUSH_IMAGE } }
+            steps {
+                echo 'PUSH_IMAGE is disabled for this demo.'
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            when { expression { return params.DEPLOY_K8S } }
+            steps {
+                echo 'DEPLOY_K8S is disabled until separately verified.'
             }
         }
     }
 
     post {
+        success { echo 'Pipeline finished successfully.' }
+        failure { echo 'Pipeline failed - check the stage logs above.' }
         always {
-            echo "Pipeline execution finished."
-            cleanWs deleteDirs: true, notFailBuild: true
-        }
-        success {
-            echo "CI/CD Pipeline Completed Successfully! Application tested, built, and ready."
-        }
-        failure {
-            echo "Pipeline Failed! Please review stage failure logs above."
+            script {
+                try {
+                    cleanWs()
+                } catch (err) {
+                    echo "Workspace cleanup skipped: ${err.getMessage()}"
+                }
+            }
         }
     }
 }
