@@ -6,15 +6,10 @@ pipeline {
         IMAGE_NAME = 'expense-tracker'
         // Jenkins Credentials ID for Docker Registry (configure in Jenkins: Manage Jenkins -> Credentials)
         DOCKER_CREDS_ID = 'dockerhub-credentials'
-        // Docker registry namespace (Set your Docker Hub username here or in Jenkins env vars)
-        DOCKER_REGISTRY_USER = credentials('DOCKER_REGISTRY_USER') ?: 'college-demo'
-        
-        // Deployment flags: Set to 'true' in Jenkins job parameters to trigger registry push & K8s rollout
-        PUSH_IMAGE = "${params.PUSH_IMAGE ?: 'false'}"
-        DEPLOY_K8S = "${params.DEPLOY_K8S ?: 'false'}"
     }
 
     parameters {
+        string(name: 'DOCKER_USER', defaultValue: 'collegedemo', description: 'Docker Hub username / registry namespace')
         booleanParam(name: 'PUSH_IMAGE', defaultValue: false, description: 'Push image to Docker Hub (requires dockerhub-credentials)')
         booleanParam(name: 'DEPLOY_K8S', defaultValue: false, description: 'Deploy to Kubernetes cluster (requires kubectl access)')
     }
@@ -77,7 +72,7 @@ pipeline {
             }
             steps {
                 echo "Applying Kubernetes manifests to target cluster..."
-                sh '''
+                sh """
                     # Apply storage and configuration first
                     kubectl apply -f k8s/persistent-volume.yaml
                     kubectl apply -f k8s/persistent-volume-claim.yaml
@@ -85,10 +80,10 @@ pipeline {
                     kubectl apply -f k8s/deployment.yaml
                     
                     # Update image to current build if pushed
-                    if [ "${PUSH_IMAGE}" = "true" ] && [ -n "${DOCKER_REGISTRY_USER}" ]; then
-                        kubectl set image deployment/expense-tracker-deployment expense-tracker=${DOCKER_REGISTRY_USER}/${APP_NAME}:${BUILD_NUMBER}
+                    if [ "${params.PUSH_IMAGE}" = "true" ] && [ -n "${params.DOCKER_USER}" ]; then
+                        kubectl set image deployment/expense-tracker-deployment expense-tracker=${params.DOCKER_USER}/${APP_NAME}:${BUILD_NUMBER}
                     fi
-                '''
+                """
             }
         }
 

@@ -28,7 +28,7 @@ COPY templates/ ./templates/
 COPY static/ ./static/
 
 # Prepare persistent data directory with non-root ownership
-RUN mkdir -p /app/data && chown -R appuser:appuser /app
+RUN mkdir -p /app/data && chown -R appuser:appuser /app && chmod -R 775 /app/data
 
 # Switch to non-root user
 USER appuser
